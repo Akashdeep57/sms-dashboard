@@ -1,0 +1,57 @@
+#version: "3.9"
+
+services:
+  sms-mongodb:
+    image: mongo:7.0
+    container_name: sms-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: sms_dashboard
+    ports:
+      - "27018:27017"
+    volumes:
+      - sms_mongo_data:/data/db
+    networks:
+      - sms-network
+
+  sms-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sms-backend
+    restart: unless-stopped
+    environment:
+      MONGO_URL: mongodb://root:password@sms-mongodb:27017/sms_dashboard?authSource=admin&directConnection=true
+      DB_NAME: sms_dashboard
+    ports:
+      - "8001:8000"
+    depends_on:
+      - sms-mongodb
+    networks:
+      - sms-network
+    volumes:
+      - ./backend:/app
+
+  sms-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sms-frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: http://localhost:8001
+    ports:
+      - "3001:80"
+    depends_on:
+      - sms-backend
+    networks:
+      - sms-network
+
+volumes:
+  sms_mongo_data:
+
+networks:
+  sms-network:
+    driver: bridge
